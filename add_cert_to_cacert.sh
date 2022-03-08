@@ -13,6 +13,7 @@ usage() {
 	echo "options:"
 	echo "c		<hostname>	Add certificate of the given hostname to java's keystore"
 	echo "f		<file>		Reads the file and gets all the hostname certificate and add it to java\'s keystore. Do not that when using file you must add newline after the last hostname"
+	echo "s					Skip downloading of certficate"
 	echo "h				Prints usage"
 	echo
 }
@@ -27,8 +28,10 @@ addCertificate() {
 	# Create certificate directory
 	mkdir -p "$certificate_base_dir"
 
-	# Get certificate
-	openssl s_client -connect $hostname:443 -showcerts </dev/null | openssl x509 -outform pem > "$certificate"
+	if [ $skip == false ]; then
+		# Get certificate
+		openssl s_client -connect $hostname:443 -showcerts </dev/null | openssl x509 -outform pem > "$certificate"	
+	fi
 	
 	# Remove certificate by alias
 	echo "Deleting $hostname"
@@ -43,20 +46,24 @@ addCertificate() {
 	echo
 }
 
-let no_arg=false
+no_arg=false
+skip=false
 
 # Get Options
-while getopts ":hc:f:" option; do
+while getopts ":hsc:f:" option; do
 	case $option in
 			h )
 				usage
 				exit;;
+			s )
+				skip=true
+				;;
 			c )
-				let no_arg=true
+				no_arg=true
 				addCertificate $OPTARG
 				exit;;
 			f )
-				let no_arg=true
+				no_arg=true
 				declare -a hostnames=($(cat certificate_lists.txt | sed 'N;s/\r\n/ /'))
 				
 				for hostname in "${hostnames[@]}"; do
